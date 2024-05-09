@@ -1,42 +1,23 @@
+package project;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.json.JSONObject;
 import org.json.JSONArray;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.Scanner;
 
-class Node {
-    Integer featureIndex;
-    Double threshold;
-    Node left;
-    Node right;
-    Double infoGain;
-    Double value;
-
-    public Node(Integer featureIndex, Double threshold, Node left, Node right, Double infoGain, Double value) {
-        this.featureIndex = featureIndex;
-        this.threshold = threshold;
-        this.left = left;
-        this.right = right;
-        this.infoGain = infoGain;
-        this.value = value;
-    }
-}
-
-public class DecisionTreeClassifier {
+public class ParallelDecisionTreeClassifier {
     Node root;
     int minSamplesSplit;
     int maxDepth;
 
-    public DecisionTreeClassifier(int minSamplesSplit, int maxDepth) {
+    public ParallelDecisionTreeClassifier(int minSamplesSplit, int maxDepth) {
         this.root = null;
         this.minSamplesSplit = minSamplesSplit;
         this.maxDepth = maxDepth;
@@ -60,17 +41,17 @@ public class DecisionTreeClassifier {
             if (bestSplit.getDouble("infoGain") > 0) {
                 Node leftSubtree = null;
                 Node rightSubtree = null;
-    
+
                 if (bestSplit.has("datasetLeft") && bestSplit.get("datasetLeft") instanceof JSONArray) {
                     leftSubtree = buildTree(toDoubleArray(bestSplit.getJSONArray("datasetLeft").toList()),
                             currDepth + 1);
                 }
-    
+
                 if (bestSplit.has("datasetRight") && bestSplit.get("datasetRight") instanceof JSONArray) {
                     rightSubtree = buildTree(toDoubleArray(bestSplit.getJSONArray("datasetRight").toList()),
                             currDepth + 1);
                 }
-    
+
                 if (leftSubtree != null && rightSubtree != null) {
                     return new Node(bestSplit.getInt("featureIndex"), bestSplit.getDouble("threshold"), leftSubtree,
                             rightSubtree,
@@ -146,14 +127,36 @@ public class DecisionTreeClassifier {
     }
 
     public double[][][] split(double[][] dataset, int featureIndex, double threshold) {
-        List<double[]> leftList = new ArrayList<>();
-        List<double[]> rightList = new ArrayList<>();
+        List<double[]> leftList = Collections.synchronizedList(new ArrayList<>());
+        List<double[]> rightList = Collections.synchronizedList(new ArrayList<>());
 
-        for (double[] row : dataset) {
-            if (row[featureIndex] <= threshold) {
-                leftList.add(row);
-            } else {
-                rightList.add(row);
+        int numThreads = Runtime.getRuntime().availableProcessors();
+        Thread[] threads = new Thread[numThreads];
+        int rowsPerThread = dataset.length / numThreads;
+
+        for (int t = 0; t < numThreads; t++) {
+            final int startRow = t * rowsPerThread;
+            final int endRow = (t == numThreads - 1) ? dataset.length : startRow + rowsPerThread;
+
+            threads[t] = new Thread(() -> {
+                for (int i = startRow; i < endRow; i++) {
+                    double[] row = dataset[i];
+                    if (row[featureIndex] <= threshold) {
+                        leftList.add(row);
+                    } else {
+                        rightList.add(row);
+                    }
+                }
+            });
+
+            threads[t].start();
+        }
+
+        for (Thread thread : threads) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
 
@@ -264,7 +267,7 @@ public class DecisionTreeClassifier {
                 Y_test[i] = trainTest[1][i][trainTest[1][i].length - 1];
             }
 
-            DecisionTreeClassifier dt = new DecisionTreeClassifier(4, 3);
+            ParallelDecisionTreeClassifier dt = new ParallelDecisionTreeClassifier(4, 3);
             dt.fit(X_train, Y_train);
             double[] predictions = dt.predict(X_test);
 
@@ -297,57 +300,5 @@ public class DecisionTreeClassifier {
             System.out.print(value + " ");
         }
         System.out.println();
-    }
-}
-
-class CSVReader {
-    private double[][] data;
-    private List<String> columnNames;
-    private HashMap<String, Integer> uniqueStrings;
-
-    public CSVReader(String filename) throws FileNotFoundException {
-        Scanner scanner = new Scanner(new File(filename));
-        List<double[]> dataList = new ArrayList<>();
-        uniqueStrings = new HashMap<>();
-        int uniqueId = 0;
-
-        // Skip the first line which contains the column names
-        columnNames = Arrays.asList(scanner.nextLine().split(","));
-        while (scanner.hasNextLine()) {
-            String[] line = scanner.nextLine().split(",");
-            double[] row = new double[line.length];
-            for (int i = 0; i < line.length; i++) {
-                try {
-                    row[i] = Double.parseDouble(line[i]);
-                } catch (NumberFormatException e) {
-                    if (!uniqueStrings.containsKey(line[i])) {
-                        uniqueStrings.put(line[i], uniqueId++);
-                    }
-                    row[i] = uniqueStrings.get(line[i]);
-                }
-            }
-            dataList.add(row);
-        }
-
-        data = dataList.toArray(new double[0][]);
-    }
-
-    public double[][] getData() {
-        return data;
-    }
-
-    public List<String> getColumnNames() {
-        return columnNames;
-    }
-
-    public double[][][] trainTestSplit(double ratio) {
-        List<double[]> dataList = new ArrayList<>(Arrays.asList(data));
-        Collections.shuffle(dataList);
-        data = dataList.toArray(new double[0][]);
-
-        int trainSize = (int) (data.length * ratio);
-        double[][] trainData = Arrays.copyOfRange(data, 0, trainSize);
-        double[][] testData = Arrays.copyOfRange(data, trainSize, data.length);
-        return new double[][][] { trainData, testData };
     }
 }
