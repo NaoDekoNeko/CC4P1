@@ -17,7 +17,9 @@ public class Client {
     public static Client start(String hostname, int port) {
         if (instance == null)
         	try {
+                System.out.println("attempt");
         		instance = new Client(hostname,port);
+                System.out.println("conected");
         	}
         	catch(Exception e) {
         		System.out.println("Cannot connect to Server !");

@@ -35,6 +35,8 @@ public class Server {
 		if (instance == null)
 			instance = new Server(port);
 
+		System.out.println("server ip:" + InetAddress.getLocalHost().getHostAddress());
+		System.out.println("port:" + port);
 		while (run) {
 			// wait for events
 			Server.selector.select();
