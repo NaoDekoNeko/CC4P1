@@ -290,8 +290,13 @@ public class Server {
             jsonObject.put("threshold", threshold);
             jsonObject.put("dataset", jsonArray);
     
-            // Send the JSONObject to the client
-            socket.getOutputStream().write(jsonObject.toString().getBytes());
+            // Send the JSONObject to the client followed by a newline character
+            socket.getOutputStream().write((jsonObject.toString() + "\n").getBytes());
+    
+            // Send end of transmission message followed by a newline character
+            String endOfTransmission = "END_OF_TRANSMISSION\n";
+            socket.getOutputStream().write(endOfTransmission.getBytes());
+    
             socket.getOutputStream().flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -301,10 +306,22 @@ public class Server {
     private static double[][][] receiveChunkFromClient(Socket socket) {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            String message = reader.readLine();
-
+            StringBuilder sb = new StringBuilder();
+            String line;
+    
+            while ((line = reader.readLine()) != null) {
+                // Check if the end of transmission message is encountered
+                if (line.contains("END_OF_TRANSMISSION")) {
+                    // Remove the end of transmission message and break the loop
+                    sb.append(line.replace("END_OF_TRANSMISSION", ""));
+                    break;
+                }
+    
+                sb.append(line);
+            }
+    
             // Parse the message back into a 3D array
-            JSONArray jsonArray = new JSONArray(message);
+            JSONArray jsonArray = new JSONArray(sb.toString());
             double[][][] chunk = new double[jsonArray.length()][][];
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONArray innerJsonArray = jsonArray.getJSONArray(i);
@@ -317,12 +334,12 @@ public class Server {
                     }
                 }
             }
-
+    
             return chunk;
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+    
         return null;
     }
 

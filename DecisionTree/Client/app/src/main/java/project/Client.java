@@ -22,37 +22,50 @@ public class Client {
             Thread receiveDataThread = new Thread(() -> {
                 try (Scanner scanner = new Scanner(client.getInputStream())) {
                     boolean bDataReceived = false;
+                    StringBuilder sb = new StringBuilder();
                     while (true) {
                         if (!bDataReceived) {
                             if (scanner.hasNextLine()) {
                                 String message = scanner.nextLine();
-                                JSONObject jsonObject = new JSONObject(message);
 
-                                // Parse featureIndex and threshold
-                                int featureIndex = jsonObject.getInt("featureIndex");
-                                double threshold = jsonObject.getDouble("threshold");
-                                System.out.println("FeatureIndex received from server: " + featureIndex);
-                                System.out.println("Threshold received from server: " + threshold);
+                                // Check if the end of transmission message is encountered
+                                if (message.contains("END_OF_TRANSMISSION")) {
+                                    System.err.println("End of transmission message received from server");
+                                    // Remove the end of transmission message and break the loop
+                                    sb.append(message.replace("END_OF_TRANSMISSION\n", ""));
+                                    break;
+                                }
 
-                                // Parse dataset
-                                JSONArray jsonArray = jsonObject.getJSONArray("dataset");
-                                double[][] data = new double[jsonArray.length()][];
-                                for (int i = 0; i < jsonArray.length(); i++) {
-                                    JSONArray innerJsonArray = jsonArray.getJSONArray(i);
-                                    data[i] = new double[innerJsonArray.length()];
-                                    for (int j = 0; j < innerJsonArray.length(); j++) {
-                                        data[i][j] = innerJsonArray.getDouble(j);
-                                    }
-                                }
-                                System.out.println("Data received from server: ");
-                                for (double[] row : data) {
-                                    System.out.println(Arrays.toString(row));
-                                }
-                                split(data);
-                                bDataReceived = true;
+                                sb.append(message);
                             }
                         }
                     }
+
+                    // Parse the received JSON
+                    JSONObject jsonObject = new JSONObject(sb.toString());
+
+                    // Parse featureIndex and threshold
+                    int featureIndex = jsonObject.getInt("featureIndex");
+                    double threshold = jsonObject.getDouble("threshold");
+                    System.out.println("FeatureIndex received from server: " + featureIndex);
+                    System.out.println("Threshold received from server: " + threshold);
+
+                    // Parse dataset
+                    JSONArray jsonArray = jsonObject.getJSONArray("dataset");
+                    double[][] data = new double[jsonArray.length()][];
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONArray innerJsonArray = jsonArray.getJSONArray(i);
+                        data[i] = new double[innerJsonArray.length()];
+                        for (int j = 0; j < innerJsonArray.length(); j++) {
+                            data[i][j] = innerJsonArray.getDouble(j);
+                        }
+                    }
+                    System.out.println("Data received from server: ");
+                    for (double[] row : data) {
+                        System.out.println(Arrays.toString(row));
+                    }
+                    split(data);
+                    bDataReceived = true;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -90,10 +103,14 @@ public class Client {
         JSONArray jsonArray = new JSONArray(datasetLeftRight);
         try {
             client.getOutputStream().write(jsonArray.toString().getBytes());
+
+            // Send end of transmission message
+            String endOfTransmission = "END_OF_TRANSMISSION";
+            client.getOutputStream().write(endOfTransmission.getBytes());
+
             client.getOutputStream().flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
 }
