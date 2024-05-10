@@ -2,7 +2,6 @@ package project;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -10,8 +9,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.io.File;
+import java.io.FileNotFoundException;
 
-import org.checkerframework.checker.units.qual.s;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -33,13 +33,10 @@ public class Server {
     private static final int maxDepth = 3;
 
     private static Node root;
-
-    private static MessageQueue sendQueue = new MessageQueue();
     static Vector<String> receiveData = new Vector<>();
     static Vector<Integer> receiveIndex = new Vector<>();
 
     public static void main(String[] args) {
-        prepareData();
         try {
             server = new ServerSocket(port);
             System.out.println("Server is running on port " + server.getLocalPort());
@@ -48,12 +45,38 @@ public class Server {
         }
 
         new Thread(() -> {
+            Scanner scanner = new Scanner(System.in);
             while (true) {
                 try {
                     Socket client = server.accept();
                     clients.add(client);
                     System.out.println("New client connected from " + client.getInetAddress().getHostAddress());
-                    new ClientHandler(client, clients.size()).start();
+                    System.out.println("Total clients connected: " + clients.size());
+        
+                    System.out.println("Do you want to start the algorithm? (yes/no)");
+                    String userInput = scanner.nextLine();
+                    if (userInput.equalsIgnoreCase("yes")) {
+                        prepareData();
+                        System.out.println("Starting the algorithm...");
+                        startTime = System.currentTimeMillis();
+                        fit();
+                        predictions = predict();
+                        calculateAccuracy();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+
+        /* 
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Socket client = server.accept();
+                    clients.add(client);
+                    System.out.println("New client connected from " + client.getInetAddress().getHostAddress());
+                    System.out.println("Total clients connected: " + clients.size());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -63,8 +86,11 @@ public class Server {
         new Thread(() -> {
             Scanner scanner = new Scanner(System.in);
             while (true) {
-                String message = scanner.nextLine();
-                if (message.equals("SEND")) {
+                System.out.println("Do you want to start the algorithm? (yes/no)");
+                String userInput = scanner.nextLine();
+                if (userInput.equalsIgnoreCase("yes")) {
+                    prepareData();
+                    System.out.println("Starting the algorithm...");
                     startTime = System.currentTimeMillis();
                     fit();
                     predictions = predict();
@@ -72,10 +98,8 @@ public class Server {
                 }
             }
         }).start();
-
-        predictions = predict();
-        calculateAccuracy();
-    }
+    */
+}
 
     private static void calculateAccuracy() {
         double correct = 0;
@@ -105,35 +129,35 @@ public class Server {
             Node node;
             double[][] dataset;
             int depth;
-    
+
             NodeDepth(Node node, double[][] dataset, int depth) {
                 this.node = node;
                 this.dataset = dataset;
                 this.depth = depth;
             }
         }
-    
+
         Node root = new Node();
         Stack<NodeDepth> stack = new Stack<>();
         stack.push(new NodeDepth(root, dataset, currDepth));
-    
+
         while (!stack.isEmpty()) {
             NodeDepth nodeDepth = stack.pop();
             Node node = nodeDepth.node;
             double[][] data = nodeDepth.dataset;
             int depth = nodeDepth.depth;
-    
+
             int numSamples = data.length;
             int numFeatures = data[0].length - 1;
             double[][] X = new double[numSamples][numFeatures];
             double[] Y = new double[numSamples];
-    
+
             // Split the dataset into X and Y
             for (int i = 0; i < numSamples; i++) {
                 System.arraycopy(data[i], 0, X[i], 0, numFeatures);
                 Y[i] = data[i][numFeatures];
             }
-    
+
             // Split until stopping conditions are met
             if (numSamples >= minSamplesSplit && depth <= maxDepth) {
                 JSONObject bestSplit = getBestSplit(data, numSamples, numFeatures);
@@ -141,26 +165,28 @@ public class Server {
                     if (bestSplit.has("datasetLeft") && bestSplit.get("datasetLeft") instanceof JSONArray) {
                         Node leftSubtree = new Node();
                         node.left = leftSubtree;
-                        stack.push(new NodeDepth(leftSubtree, toDoubleArray(bestSplit.getJSONArray("datasetLeft").toList()), depth + 1));
+                        stack.push(new NodeDepth(leftSubtree,
+                                toDoubleArray(bestSplit.getJSONArray("datasetLeft").toList()), depth + 1));
                     }
-    
+
                     if (bestSplit.has("datasetRight") && bestSplit.get("datasetRight") instanceof JSONArray) {
                         Node rightSubtree = new Node();
                         node.right = rightSubtree;
-                        stack.push(new NodeDepth(rightSubtree, toDoubleArray(bestSplit.getJSONArray("datasetRight").toList()), depth + 1));
+                        stack.push(new NodeDepth(rightSubtree,
+                                toDoubleArray(bestSplit.getJSONArray("datasetRight").toList()), depth + 1));
                     }
-    
+
                     node.featureIndex = bestSplit.getInt("featureIndex");
                     node.threshold = bestSplit.getDouble("threshold");
                     node.infoGain = bestSplit.getDouble("infoGain");
                     continue;
                 }
             }
-    
+
             // Compute leaf node
             node.value = calculateLeafValue(Y);
         }
-    
+
         return root;
     }
 
@@ -213,7 +239,6 @@ public class Server {
     }
 
     public static double[][][] split(double[][] dataset, int featureIndex, double threshold) {
-
         int numClients = clients.size();
         Thread[] threads = new Thread[numClients];
         int rowsPerThread = dataset.length / numClients;
@@ -253,24 +278,9 @@ public class Server {
 
     private static void sendChunkToClient(double[][] chunk, Socket socket) {
         try {
-            StringBuilder message = new StringBuilder();
-            message.append("[");
-            for (int i = 0; i < chunk.length; i++) {
-                message.append("[");
-                for (int j = 0; j < chunk[i].length; j++) {
-                    message.append(chunk[i][j]);
-                    if (j < chunk[i].length - 1) {
-                        message.append(",");
-                    }
-                }
-                message.append("]");
-                if (i < chunk.length - 1) {
-                    message.append(",");
-                }
-            }
-            message.append("]");
+            JSONArray jsonArray = new JSONArray(chunk);
 
-            socket.getOutputStream().write(message.toString().getBytes());
+            socket.getOutputStream().write(jsonArray.toString().getBytes());
             socket.getOutputStream().flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -376,35 +386,6 @@ public class Server {
         return array;
     }
 
-    private static void sendData() {
-        int size = 0;
-        int offset = 0;
-        for (int i = 0; i < clients.size(); i++) {
-            String message = getDataToSend(i, size, offset);
-            message += "\n";
-            sendQueue.addMessage(message);
-        }
-        for (Socket client : clients) {
-            try {
-                client.getOutputStream().write(sendQueue.getNextMessage().getBytes());
-                client.getOutputStream().flush();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private static String getDataToSend(int i, int size, int offset) {
-        int start = i * size;
-        int end = start + size;
-        if (i == clients.size() - 1) {
-            end += offset;
-        }
-        String message = "";
-
-        return message;
-    }
-
     static void prepareData() {
         try {
             CSVReader csvReader = new CSVReader("iris.csv");
@@ -452,37 +433,81 @@ public class Server {
     }
 }
 
-class ClientHandler extends Thread {
-    private final Socket client;
-    private InputStream entry;
-    private int index;
+class Node {
+    Integer featureIndex;
+    Double threshold;
+    Node left;
+    Node right;
+    Double infoGain;
+    Double value;
 
-    public ClientHandler(Socket client, int index) {
-        this.client = client;
-        this.index = index;
+    public Node(Integer featureIndex, Double threshold, Node left, Node right, Double infoGain, Double value) {
+        this.featureIndex = featureIndex;
+        this.threshold = threshold;
+        this.left = left;
+        this.right = right;
+        this.infoGain = infoGain;
+        this.value = value;
     }
 
-    public void run() {
-        try {
-            entry = client.getInputStream();
-            Scanner scanner = new Scanner(entry);
-            while (true) {
-                if (scanner.hasNextLine()) {
-                    System.out.println("Received data from client " + index);
-                    String message = scanner.nextLine();
-                    synchronized (Server.receiveIndex) {
-                        Server.receiveIndex.add(index);
+    public Node() {
+        this.featureIndex = 0;
+        this.threshold = 0.0;
+        this.left = null;
+        this.right = null;
+        this.infoGain = 0.0;
+        this.value = 0.0;
+    }
+}
+
+class CSVReader {
+    private double[][] data;
+    private List<String> columnNames;
+    private HashMap<String, Integer> uniqueStrings;
+
+    public CSVReader(String filename) throws FileNotFoundException {
+        Scanner scanner = new Scanner(new File(filename));
+        List<double[]> dataList = new ArrayList<>();
+        uniqueStrings = new HashMap<>();
+        int uniqueId = 0;
+
+        // Skip the first line which contains the column names
+        columnNames = Arrays.asList(scanner.nextLine().split(","));
+        while (scanner.hasNextLine()) {
+            String[] line = scanner.nextLine().split(",");
+            double[] row = new double[line.length];
+            for (int i = 0; i < line.length; i++) {
+                try {
+                    row[i] = Double.parseDouble(line[i]);
+                } catch (NumberFormatException e) {
+                    if (!uniqueStrings.containsKey(line[i])) {
+                        uniqueStrings.put(line[i], uniqueId++);
                     }
-                    synchronized (Server.receiveData) {
-                        Server.receiveData.add(message);
-                    }
-                    if (Server.receiveIndex.size() == Server.clients.size()) {
-                        //Server.sortData();
-                    }
+                    row[i] = uniqueStrings.get(line[i]);
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            dataList.add(row);
         }
+
+        data = dataList.toArray(new double[0][]);
+    }
+
+    public double[][] getData() {
+        return data;
+    }
+
+    public List<String> getColumnNames() {
+        return columnNames;
+    }
+
+    public double[][][] trainTestSplit(double ratio) {
+        List<double[]> dataList = new ArrayList<>(Arrays.asList(data));
+        Collections.shuffle(dataList);
+        data = dataList.toArray(new double[0][]);
+
+        int trainSize = (int) (data.length * ratio);
+        double[][] trainData = Arrays.copyOfRange(data, 0, trainSize);
+        double[][] testData = Arrays.copyOfRange(data, trainSize, data.length);
+        return new double[][][] { trainData, testData };
     }
 }
