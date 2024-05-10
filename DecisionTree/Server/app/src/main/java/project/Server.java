@@ -119,7 +119,7 @@ public class Server {
         double[][] dataset = new double[X_train.length][X_train[0].length + 1];
         for (int i = 0; i < X_train.length; i++) {
             System.arraycopy(X_train[i], 0, dataset[i], 0, X_train[i].length);
-            dataset[i][X_train[i].length] = Y_test[i];
+            dataset[i][X_train[i].length] = Y_train[i];
         }
         root = buildTree(dataset, 0);
     }
@@ -252,7 +252,7 @@ public class Server {
 
             double[][] chunk = Arrays.copyOfRange(dataset, startRow, endRow);
             threads[t] = new Thread(() -> {
-                sendChunkToClient(chunk, clients.get(socketIndex));
+                sendChunkToClient(chunk, featureIndex, threshold, clients.get(socketIndex));
                 double[][][] datasetLeftRight = receiveChunkFromClient(clients.get(socketIndex));
                 responses.add(datasetLeftRight);
             });
@@ -276,11 +276,22 @@ public class Server {
         return datasetLeftRight;
     }
 
-    private static void sendChunkToClient(double[][] chunk, Socket socket) {
+    private static void sendChunkToClient(double[][] chunk, int featureIndex, double threshold, Socket socket) {
         try {
-            JSONArray jsonArray = new JSONArray(chunk);
-
-            socket.getOutputStream().write(jsonArray.toString().getBytes());
+            // Convert the 2D array to a JSONArray
+            JSONArray jsonArray = new JSONArray();
+            for (double[] row : chunk) {
+                jsonArray.put(new JSONArray(row));
+            }
+    
+            // Create a JSONObject to hold the featureIndex, threshold, and dataset
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("featureIndex", featureIndex);
+            jsonObject.put("threshold", threshold);
+            jsonObject.put("dataset", jsonArray);
+    
+            // Send the JSONObject to the client
+            socket.getOutputStream().write(jsonObject.toString().getBytes());
             socket.getOutputStream().flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -389,7 +400,6 @@ public class Server {
     static void prepareData() {
         try {
             CSVReader csvReader = new CSVReader("iris.csv");
-            // printDoubleArray(csvReader.getData());
             double[][][] trainTest = csvReader.trainTestSplit(0.7);
 
             X_train = new double[trainTest[0].length][trainTest[0][0].length - 1];

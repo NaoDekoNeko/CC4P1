@@ -1,23 +1,24 @@
 package project;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.*;
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class Client {
     private static final int port = 1703;
     private static final String host = "localhost";
     private static Socket client;
 
+    static int featureIndex;
+    static double threshold;
+
     public static void main(String[] args) {
         try {
             client = new Socket(host, port);
             System.out.println("Client has connected to server on port " + client.getPort());
-            
-            PrintWriter out = new PrintWriter(client.getOutputStream(), true);
-            out.println("SEND");
+
             Thread receiveDataThread = new Thread(() -> {
                 try (Scanner scanner = new Scanner(client.getInputStream())) {
                     boolean bDataReceived = false;
@@ -25,7 +26,16 @@ public class Client {
                         if (!bDataReceived) {
                             if (scanner.hasNextLine()) {
                                 String message = scanner.nextLine();
-                                JSONArray jsonArray = new JSONArray(message);
+                                JSONObject jsonObject = new JSONObject(message);
+
+                                // Parse featureIndex and threshold
+                                int featureIndex = jsonObject.getInt("featureIndex");
+                                double threshold = jsonObject.getDouble("threshold");
+                                System.out.println("FeatureIndex received from server: " + featureIndex);
+                                System.out.println("Threshold received from server: " + threshold);
+
+                                // Parse dataset
+                                JSONArray jsonArray = jsonObject.getJSONArray("dataset");
                                 double[][] data = new double[jsonArray.length()][];
                                 for (int i = 0; i < jsonArray.length(); i++) {
                                     JSONArray innerJsonArray = jsonArray.getJSONArray(i);
@@ -34,7 +44,11 @@ public class Client {
                                         data[i][j] = innerJsonArray.getDouble(j);
                                     }
                                 }
-
+                                System.out.println("Data received from server: ");
+                                for (double[] row : data) {
+                                    System.out.println(Arrays.toString(row));
+                                }
+                                split(data);
                                 bDataReceived = true;
                             }
                         }
@@ -49,7 +63,7 @@ public class Client {
         }
     }
 
-    public void split(double[][] dataset, int featureIndex, double threshold) {
+    public static void split(double[][] dataset) {
         List<double[]> leftList = new ArrayList<>();
         List<double[]> rightList = new ArrayList<>();
 
