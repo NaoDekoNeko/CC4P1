@@ -39,7 +39,8 @@ public class Server {
     public static void main(String[] args) {
         try {
             server = new ServerSocket(port);
-            System.out.println("Server is running on IP address " + server.getInetAddress().getLocalHost().getHostAddress());
+            System.out.println(
+                    "Server is running on IP address " + server.getInetAddress().getLocalHost().getHostAddress());
             System.out.println("Server is running on port " + server.getLocalPort());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -53,23 +54,23 @@ public class Server {
                     clients.add(client);
                     System.out.println("New client connected from " + client.getInetAddress().getHostAddress());
                     System.out.println("Total clients connected: " + clients.size());
-        
-                    System.out.println("Do you want to start the algorithm? (yes/no)");
-                    String userInput = scanner.nextLine();
-                    if (userInput.equalsIgnoreCase("yes")) {
-                        prepareData();
-                        System.out.println("Starting the algorithm...");
-                        startTime = System.currentTimeMillis();
-                        fit();
-                        predictions = predict();
-                        calculateAccuracy();
-                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }).start();
-}
+        
+        System.out.println("Type 'yes' to start the algorithm\n");
+        String userInput = new Scanner(System.in).nextLine();
+        if (userInput.equalsIgnoreCase("yes")) {
+            prepareData();
+            System.out.println("Starting the algorithm...");
+            startTime = System.currentTimeMillis();
+            fit();
+            predictions = predict();
+            calculateAccuracy();
+        }
+    }
 
     private static void calculateAccuracy() {
         double correct = 0;
@@ -255,20 +256,20 @@ public class Server {
             for (double[] row : chunk) {
                 jsonArray.put(new JSONArray(row));
             }
-    
+
             // Create a JSONObject to hold the featureIndex, threshold, and dataset
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("featureIndex", featureIndex);
             jsonObject.put("threshold", threshold);
             jsonObject.put("dataset", jsonArray);
-    
+
             // Send the JSONObject to the client followed by a newline character
             socket.getOutputStream().write((jsonObject.toString() + "\n").getBytes());
-    
+
             // Send end of transmission message followed by a newline character
             String endOfTransmission = "END_OF_TRANSMISSION\n";
             socket.getOutputStream().write(endOfTransmission.getBytes());
-    
+
             socket.getOutputStream().flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -280,7 +281,7 @@ public class Server {
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             StringBuilder sb = new StringBuilder();
             String line;
-    
+
             while ((line = reader.readLine()) != null) {
                 // Check if the end of transmission message is encountered
                 if (line.contains("END_OF_TRANSMISSION")) {
@@ -288,10 +289,10 @@ public class Server {
                     sb.append(line.replace("END_OF_TRANSMISSION", ""));
                     break;
                 }
-    
+
                 sb.append(line);
             }
-    
+
             // Parse the message back into a 3D array
             JSONArray jsonArray = new JSONArray(sb.toString());
             double[][][] chunk = new double[jsonArray.length()][][];
@@ -306,12 +307,12 @@ public class Server {
                     }
                 }
             }
-    
+
             return chunk;
         } catch (IOException e) {
             e.printStackTrace();
         }
-    
+
         return null;
     }
 
