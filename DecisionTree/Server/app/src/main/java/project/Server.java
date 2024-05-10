@@ -39,6 +39,7 @@ public class Server {
     public static void main(String[] args) {
         try {
             server = new ServerSocket(port);
+            System.out.println("Server is running on IP address " + server.getInetAddress().getLocalHost().getHostAddress());
             System.out.println("Server is running on port " + server.getLocalPort());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -68,37 +69,6 @@ public class Server {
                 }
             }
         }).start();
-
-        /* 
-        new Thread(() -> {
-            while (true) {
-                try {
-                    Socket client = server.accept();
-                    clients.add(client);
-                    System.out.println("New client connected from " + client.getInetAddress().getHostAddress());
-                    System.out.println("Total clients connected: " + clients.size());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-
-        new Thread(() -> {
-            Scanner scanner = new Scanner(System.in);
-            while (true) {
-                System.out.println("Do you want to start the algorithm? (yes/no)");
-                String userInput = scanner.nextLine();
-                if (userInput.equalsIgnoreCase("yes")) {
-                    prepareData();
-                    System.out.println("Starting the algorithm...");
-                    startTime = System.currentTimeMillis();
-                    fit();
-                    predictions = predict();
-                    calculateAccuracy();
-                }
-            }
-        }).start();
-    */
 }
 
     private static void calculateAccuracy() {
