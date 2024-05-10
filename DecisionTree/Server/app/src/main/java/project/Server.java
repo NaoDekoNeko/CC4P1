@@ -235,6 +235,8 @@ public class Server {
             }
         }
 
+        bestSplit.put("infoGain", maxInfoGain);
+
         return bestSplit;
     }
 
