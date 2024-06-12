@@ -1,0 +1,20 @@
+# Use an official Node.js runtime as a parent image
+FROM node:14
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application
+COPY . .
+
+# Make port 8081 available to the world outside this container
+EXPOSE 8081
+
+# Run get_ip.js and then server.js when the container launches
+CMD ["sh", "-c", "node get_ip.js && npm start"]

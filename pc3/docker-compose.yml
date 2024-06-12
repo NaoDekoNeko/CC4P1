@@ -1,0 +1,65 @@
+services:
+  sales-db:
+    build:
+      context: ./SalesServer/BD
+    environment:
+      POSTGRES_DB: BD1
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+
+  routes-db:
+    build:
+      context: ./RoutesServer/BD
+    environment:
+      SA_PASSWORD: "Admin@123"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+
+  rabbitmq:
+    image: rabbitmq:3.8.9-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - ./enable_plugins:/etc/rabbitmq/enabled_plugins
+
+  sales-server:
+    build:
+      context: ./SalesServer/SalesServer
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      POSTGRES_HOST: sales-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: BD1
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    depends_on:
+      - sales-db
+      - rabbitmq
+    ports:
+      - "8080:8080"
+
+  routes-server:
+    build:
+      context: ./RoutesServer/RoutesServer
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      SQLSERVER_HOST: routes-db
+      SQLSERVER_PORT: 1433
+      SQLSERVER_DB: BD2
+      SQLSERVER_USER: sa
+      SQLSERVER_PASSWORD: Admin@123
+    depends_on:
+      - routes-db
+      - rabbitmq
+    ports:
+      - "8081:8081"

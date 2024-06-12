@@ -1,0 +1,55 @@
+services:
+  pyworker:
+    build:
+      context: ./PyWorker
+      dockerfile: Dockerfile.py-worker
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./PyWorker/storage:/app/storage
+    environment:
+      - SERVICE_NAME=python-worker
+    networks:
+      - mynetwork
+
+  jsworker:
+    build:
+      context: ./JsWorker
+      dockerfile: Dockerfile.js-worker
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./JsWorker/storage:/app/storage
+    environment:
+      - SERVICE_NAME=js-worker
+    networks:
+      - mynetwork
+
+  javaworker:
+    build:
+      context: ./JavaWorker
+      dockerfile: Dockerfile.java-worker
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./JavaWorker/storage:/app/storage
+    environment:
+      - SERVICE_NAME=java-worker
+    networks:
+      - mynetwork
+
+  pyclient:
+    build:
+      context: ./PyClient
+      dockerfile: Dockerfile.py-client
+    volumes:
+      - ./PyClient/downloads:/app/downloads
+    environment:
+      - SERVICE_NAME=client
+    networks:
+      - mynetwork
+    stdin_open: true
+    tty: true
+
+networks:
+  mynetwork:
