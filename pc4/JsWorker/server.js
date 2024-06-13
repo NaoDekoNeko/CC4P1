@@ -3,7 +3,6 @@ const bodyParser = require('body-parser');
 const { handleUpload } = require('./handlers/uploadHandler');
 const { handleList } = require('./handlers/listHandler');
 const { handleDownload } = require('./handlers/downloadHandler');
-const { startConsensus } = require('./consensus');
 
 const app = express();
 const PORT = 8081;
@@ -17,5 +16,4 @@ app.get('/download', handleDownload);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Worker running on port ${PORT}`);
-  startConsensus();
 });

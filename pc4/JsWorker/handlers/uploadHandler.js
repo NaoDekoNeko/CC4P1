@@ -2,19 +2,17 @@ const fs = require('fs-extra');
 const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
+const RaftNode = require('../raftNode'); // Asegúrate de que la ruta es correcta
 
 const STORAGE_DIR = path.join(__dirname, '../storage');
 
-const workers = [
-    "http://pyworker:8080",
-    "http://jsworker:8081",
-    "http://javaworker:8082"
-];
+const workerAddresses = ["http://pyworker:8080", "http://jsworker:8081", "http://javaworker:8082"];
+const raftNode = new RaftNode("jsworker", workerAddresses);
+raftNode.run();
 
-function replicateFile(filePath, fileName) {
-    workers.forEach(worker => {
+const replicateFile = (filePath, fileName) => {
+    workerAddresses.forEach(worker => {
         if (worker !== `http://jsworker:8081`) {
-            console.log(`Replicating to ${worker}`);
             const formData = new FormData();
             formData.append('file', fs.createReadStream(filePath));
             axios.post(`${worker}/upload`, formData, {
@@ -26,7 +24,7 @@ function replicateFile(filePath, fileName) {
             });
         }
     });
-}
+};
 
 const handleUpload = (req, res) => {
     console.log('Handling file upload...');
@@ -66,7 +64,9 @@ const handleUpload = (req, res) => {
                 console.error('Error saving file:', err.message);
                 return res.status(500).json({ error: err.message });
             }
-            replicateFile(filePath, filename);  // Use filename here
+            if (raftNode.getState() === 'leader') {
+                replicateFile(filePath, filename);
+            }
             res.json({ message: 'File uploaded successfully' });
         });
     });

@@ -53,9 +53,9 @@ def upload_file(file_path):
         except requests.exceptions.RequestException as e:
             print(f"HTTP request failed: {e}")
 
-def download_file(file_name, download_path='.'):
+def download_file(file_name, download_path='./downloads'):
     try:
-        response = requests.get(f"{SERVER_URL}/download", params={'file_name': file_name})
+        response = requests.get(f"{SERVER_URL}", params={'file_name': file_name})
         response.raise_for_status()
         with open(os.path.join(download_path, file_name), 'wb') as f:
             f.write(response.content)

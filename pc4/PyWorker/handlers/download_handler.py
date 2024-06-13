@@ -1,5 +1,5 @@
 import os
-from flask import request, send_from_directory, jsonify
+from flask import send_from_directory, jsonify
 
 STORAGE_DIR = "storage/"
 

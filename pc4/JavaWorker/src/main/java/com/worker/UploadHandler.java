@@ -19,6 +19,11 @@ public class UploadHandler implements HttpHandler {
         "http://jsworker:8081",
         "http://javaworker:8082"
     };
+    private final RaftNode raftNode;
+
+    public UploadHandler(RaftNode raftNode) {
+        this.raftNode = raftNode;
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -65,7 +70,9 @@ public class UploadHandler implements HttpHandler {
 
                 Files.write(Paths.get("storage/" + fileName), fileContent);
                 System.out.println("File " + fileName + " uploaded successfully");
-                replicateFile("storage/" + fileName, fileName);
+                if (raftNode.getState().equals("leader")) {
+                    replicateFile("storage/" + fileName, fileName);
+                }
                 Map<String, String> response = new HashMap<>();
                 response.put("message", "File uploaded successfully");
                 String jsonResponse = gson.toJson(response);
