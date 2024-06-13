@@ -11,6 +11,7 @@ services:
       - SERVICE_NAME=python-worker
     networks:
       - mynetwork
+    hostname: pyworker
 
   jsworker:
     build:
@@ -24,6 +25,7 @@ services:
       - SERVICE_NAME=js-worker
     networks:
       - mynetwork
+    hostname: jsworker
 
   javaworker:
     build:
@@ -37,6 +39,7 @@ services:
       - SERVICE_NAME=java-worker
     networks:
       - mynetwork
+    hostname: javaworker
 
   pyclient:
     build:

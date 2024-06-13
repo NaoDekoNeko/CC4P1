@@ -3,14 +3,16 @@ from flask import request, jsonify
 
 STORAGE_DIR = "storage/"
 
-def handle_upload(request):
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+import os
+from flask import jsonify
 
+def handle_upload(request):
+    storage_dir = 'storage'
+    if 'file' not in request.files:
+        return {'status': 'error', 'message': 'No file part'}
     file = request.files['file']
     if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    file_path = os.path.join(STORAGE_DIR, file.filename)
+        return {'status': 'error', 'message': 'No selected file'}
+    file_path = os.path.join(storage_dir, file.filename)
     file.save(file_path)
-    return jsonify({"message": "File uploaded successfully"}), 200
+    return {'status': 'success', 'file_name': file.filename}

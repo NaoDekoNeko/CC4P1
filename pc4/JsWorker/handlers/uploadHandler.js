@@ -1,76 +1,80 @@
 const fs = require('fs-extra');
 const path = require('path');
+const axios = require('axios');
+const FormData = require('form-data');
 
 const STORAGE_DIR = path.join(__dirname, '../storage');
 
 const workers = [
-  "http://pyworker:8080",
-  "http://jsworker:8081",
-  "http://javaworker:8082"
+    "http://pyworker:8080",
+    "http://jsworker:8081",
+    "http://javaworker:8082"
 ];
 
 function replicateFile(filePath, fileName) {
-  workers.forEach(worker => {
-      if (worker !== `http://jsworker:${PORT}`) {
-          const formData = new FormData();
-          formData.append('file', fs.createReadStream(filePath));
-          axios.post(`${worker}/upload`, formData, {
-              headers: formData.getHeaders()
-          }).then(response => {
-              console.log(`Replicating ${fileName} to ${worker}: ${response.status}`);
-          }).catch(error => {
-              console.error(`Error replicating ${fileName} to ${worker}: ${error.message}`);
-          });
-      }
-  });
+    workers.forEach(worker => {
+        if (worker !== `http://jsworker:8081`) {
+            console.log(`Replicating to ${worker}`);
+            const formData = new FormData();
+            formData.append('file', fs.createReadStream(filePath));
+            axios.post(`${worker}/upload`, formData, {
+                headers: formData.getHeaders()
+            }).then(response => {
+                console.log(`Replicating ${fileName} to ${worker}: ${response.status}`);
+            }).catch(error => {
+                console.error(`Error replicating ${fileName} to ${worker}: ${error.message}`);
+            });
+        }
+    });
 }
 
 const handleUpload = (req, res) => {
-  console.log('Handling file upload...');
-  console.log('Request headers:', req.headers);
+    console.log('Handling file upload...');
+    console.log('Request headers:', req.headers);
 
-  const contentType = req.headers['content-type'];
-  if (!contentType || !contentType.startsWith('multipart/form-data')) {
-    return res.status(400).json({ error: 'Content-Type must be multipart/form-data' });
-  }
-
-  let fileBuffer = Buffer.alloc(0);
-  req.on('data', (chunk) => {
-    fileBuffer = Buffer.concat([fileBuffer, chunk]);
-  });
-
-  req.on('end', () => {
-    console.log('Received file data');
-    const boundary = '--' + contentType.split('boundary=')[1];
-    const parts = fileBuffer.toString().split(boundary).slice(1, -1);
-
-    if (parts.length === 0) {
-      return res.status(400).json({ error: 'No files were uploaded.' });
+    const contentType = req.headers['content-type'];
+    if (!contentType || !contentType.startsWith('multipart/form-data')) {
+        return res.status(400).json({ error: 'Content-Type must be multipart/form-data' });
     }
 
-    const filePart = parts[0];
-    const [header, fileContent] = filePart.split('\r\n\r\n');
-    const headerLines = header.toString().split('\r\n');
-    const filenameLine = headerLines.find(line => line.includes('filename='));
-    const filename = filenameLine.match(/filename="([^"]+)"/)[1].trim();
-
-    console.log('Saving file:', filename);
-    const filePath = path.join(STORAGE_DIR, filename);
-
-    fs.writeFile(filePath, fileContent, (err) => {
-      if (err) {
-        console.error('Error saving file:', err.message);
-        return res.status(500).json({ error: err.message });
-      }
-      replicateFile(filePath, file.name);
-      res.json({ message: 'File uploaded successfully' });
+    let fileBuffer = Buffer.alloc(0);
+    req.on('data', (chunk) => {
+        fileBuffer = Buffer.concat([fileBuffer, chunk]);
     });
-  });
 
-  req.on('error', (err) => {
-    console.error('Request error:', err.message);
-    res.status(500).json({ error: err.message });
-  });
+    req.on('end', () => {
+        console.log('Received file data');
+        const boundary = '--' + contentType.split('boundary=')[1];
+        const parts = fileBuffer.toString().split(boundary).slice(1, -1);
+
+        if (parts.length === 0) {
+            return res.status(400).json({ error: 'No files were uploaded.' });
+        }
+
+        const filePart = parts[0];
+        const [header, fileContent] = filePart.split('\r\n\r\n');
+        const headerLines = header.toString().split('\r\n');
+        const filenameLine = headerLines.find(line => line.includes('filename='));
+        const filename = filenameLine.match(/filename="([^"]+)"/)[1].trim();
+
+        console.log('Saving file:', filename);
+        const filePath = path.join(STORAGE_DIR, filename);
+
+        // Write the file content to the file system
+        fs.writeFile(filePath, fileContent.trim(), (err) => {
+            if (err) {
+                console.error('Error saving file:', err.message);
+                return res.status(500).json({ error: err.message });
+            }
+            replicateFile(filePath, filename);  // Use filename here
+            res.json({ message: 'File uploaded successfully' });
+        });
+    });
+
+    req.on('error', (err) => {
+        console.error('Request error:', err.message);
+        res.status(500).json({ error: err.message });
+    });
 };
 
 module.exports = { handleUpload };

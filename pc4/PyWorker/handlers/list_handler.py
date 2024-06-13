@@ -3,6 +3,10 @@ from flask import jsonify
 
 STORAGE_DIR = "storage/"
 
+import os
+
 def handle_list():
-    files = os.listdir(STORAGE_DIR)
-    return jsonify({"files": files}), 200
+    storage_dir = 'storage'
+    files = os.listdir(storage_dir)
+    print(f"Files in storage: {files}")
+    return {'files': files}

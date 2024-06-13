@@ -10,5 +10,8 @@ COPY . .
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install ping
+RUN apt-get update && apt-get install -y iputils-ping
+
 # Set the default command to run when the container starts
 CMD ["bash"]

@@ -37,7 +37,9 @@ def download_file():
 
 @app.route('/list', methods=['GET'])
 def list_files():
-    return handle_list(request)
+    result = handle_list()
+    print(f"List files response: {result}")
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
