@@ -58,7 +58,8 @@ public class UploadHandler implements HttpHandler {
 
         for (String part : parts) {
             if (part.contains("filename=\"")) {
-                System.out.println("Processing part: " + part);
+                System.out.println("Processing file upload...");
+
                 String[] headers = part.split("\r\n");
                 String fileName = headers[1].split("filename=\"")[1].split("\"")[0];
                 int fileStart = part.indexOf("\r\n\r\n") + 4;
@@ -70,9 +71,11 @@ public class UploadHandler implements HttpHandler {
 
                 Files.write(Paths.get("storage/" + fileName), fileContent);
                 System.out.println("File " + fileName + " uploaded successfully");
+
                 if (raftNode.getState().equals("leader")) {
                     replicateFile("storage/" + fileName, fileName);
                 }
+
                 Map<String, String> response = new HashMap<>();
                 response.put("message", "File uploaded successfully");
                 String jsonResponse = gson.toJson(response);
