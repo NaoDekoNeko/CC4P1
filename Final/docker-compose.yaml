@@ -1,0 +1,38 @@
+services:
+  worker1:
+    build: ./worker
+    container_name: worker1
+    environment:
+      - WORKER_ID=1
+      - PORT=5001
+      - HOSTNAME=worker1
+    networks:
+      - mynetwork
+    ports:
+      - "5001:5001"
+
+  worker2:
+    build: ./worker
+    container_name: worker2
+    environment:
+      - WORKER_ID=2
+      - PORT=5002
+      - HOSTNAME=worker2
+    networks:
+      - mynetwork
+    ports:
+      - "5002:5002"
+
+  client:
+    build: ./client
+    container_name: client
+    environment:
+      - PORT=5003
+    networks:
+      - mynetwork
+    ports:
+      - "5003:5003"
+
+networks:
+  mynetwork:
+    driver: bridge
