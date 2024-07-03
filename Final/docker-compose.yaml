@@ -1,6 +1,6 @@
 services:
   worker1:
-    build: ./worker
+    build: ./worker-python
     container_name: worker1
     environment:
       - WORKER_ID=1
@@ -10,9 +10,10 @@ services:
       - mynetwork
     ports:
       - "5001:5001"
+    hostname: worker1
 
   worker2:
-    build: ./worker
+    build: ./worker-python
     container_name: worker2
     environment:
       - WORKER_ID=2
@@ -22,16 +23,31 @@ services:
       - mynetwork
     ports:
       - "5002:5002"
+    hostname: worker2
+
+  worker3:
+    build: ./worker-node
+    container_name: worker3
+    environment:
+      - WORKER_ID=3
+      - PORT=5003
+      - HOSTNAME=worker3
+    networks:
+      - mynetwork
+    ports:
+      - "5003:5003"
+    hostname: worker3
 
   client:
     build: ./client
     container_name: client
     environment:
-      - PORT=5003
+      - PORT=5004
     networks:
       - mynetwork
     ports:
-      - "5003:5003"
+      - "5004:5004"
+    hostname: client
 
 networks:
   mynetwork:

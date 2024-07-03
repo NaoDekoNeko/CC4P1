@@ -3,7 +3,6 @@ import requests
 import random
 import string
 import os
-import aiohttp
 
 app = Quart(__name__)
 
@@ -13,7 +12,7 @@ port = os.getenv('PORT', '5003')
 
 def get_leader_url():
     global leader_url
-    workers = ['http://worker1:5001', 'http://worker2:5002']
+    workers = ["http://worker1:5001", "http://worker2:5002", "http://worker3:5003"]
     for worker in workers:
         try:
             print(f"Checking leader status from {worker}")
