@@ -1,77 +1,69 @@
 const express = require('express');
-const formidable = require('formidable');
-const fs = require('fs');
+const bodyParser = require('body-parser');
 const axios = require('axios');
+const formidable = require('formidable');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
+app.use(bodyParser.json());
+app.use(express.static('public'));
+
+const clientId = Math.random().toString(36).substring(7);
 const port = process.env.PORT || 5006;
-
-const clientId = 'client-js';
 let leaderUrl = null;
-const workers = ['http://worker1:5001', 'http://worker2:5002', 'http://worker3:5003', 'http://worker4:5004'];
 
-async function getLeaderUrl() {
+const workers = ["http://worker1:5001", "http://worker3:5003", "http://worker4:5004"];
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+const getLeaderUrl = async () => {
     for (const worker of workers) {
         try {
-            console.log(`Checking leader status from ${worker}`);
             const response = await axios.get(`${worker}/is_leader`);
             if (response.data.is_leader) {
                 leaderUrl = worker;
-                console.log(`Leader detected: ${leaderUrl}`);
                 break;
             }
         } catch (error) {
-            console.error(`Error checking leader status from ${worker}: ${error}`);
+            console.error(`Error checking leader status from ${worker}: ${error.message}`);
         }
     }
-}
+};
 
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
+app.get('/', async (req, res) => {
+    await getLeaderUrl();
+    res.render('index', { clientId });
 });
 
 app.post('/submit_task', (req, res) => {
-    const form = new formidable.IncomingForm();
+    const form = formidable({ multiples: true });
+
     form.parse(req, async (err, fields, files) => {
         if (err) {
-            console.error(`Error parsing form: ${err}`);
-            return res.status(400).json({ status: `Error parsing form: ${err}` });
+            return res.status(400).json({ status: `Error processing request data: ${err.message}` });
         }
-
-        const taskType = fields.task_type;
-        const keyword = fields.keyword;
-        const n = fields.n ? parseInt(fields.n) : undefined;
-        const file = files.file;
-        const fileContent = fs.readFileSync(file.path, 'utf-8');
 
         const task = {
-            client_id: clientId,
+            client_id: fields.client_id,
             client_host: 'client-js',
             client_port: port,
-            file_content: fileContent,
-            task_type: taskType,
-            keyword: keyword,
-            n: n
+            file_content: await fs.promises.readFile(files.file.path, 'utf8'),
+            task_type: fields.task_type,
+            keyword: fields.keyword,
+            n: parseInt(fields.n, 10)
         };
 
-        await getLeaderUrl();
-        if (!leaderUrl) {
-            return res.status(500).json({ status: "No leader available" });
-        }
-
         try {
-            console.log(`Submitting task to leader ${leaderUrl} with task: ${JSON.stringify(task)}`);
             const response = await axios.post(`${leaderUrl}/submit_task`, task);
-            const resultData = response.data;
-            console.log(`Task submitted: ${JSON.stringify(resultData)}`);
-            res.json(resultData);
+            res.json(response.data);
         } catch (error) {
-            console.error(`Error submitting task to leader: ${error}`);
-            res.status(500).json({ status: `Error submitting task: ${error}` });
+            res.status(500).json({ status: `Error submitting task: ${error.message}` });
         }
     });
 });
 
 app.listen(port, () => {
-    console.log(`Client-JS running on port ${port}`);
+    console.log(`Client running on port ${port}`);
 });

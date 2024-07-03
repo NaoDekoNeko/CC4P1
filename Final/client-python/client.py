@@ -12,7 +12,7 @@ port = os.getenv('PORT', '5005')
 
 def get_leader_url():
     global leader_url
-    workers = ["http://worker1:5001", "http://worker2:5002", "http://worker3:5003", "http://worker4:5004"]
+    workers = ["http://worker1:5001", "http://worker3:5003", "http://worker4:5004"]
     for worker in workers:
         try:
             print(f"Checking leader status from {worker}")

@@ -8,7 +8,7 @@ app.use(bodyParser.json());
 const workerId = process.env.WORKER_ID || 'unknown';
 const workerPort = process.env.PORT || 5000;
 const hostname = process.env.HOSTNAME || 'localhost';
-let workers =  ["http://worker1:5001", "http://worker2:5002", "http://worker3:5003", "http://worker4:5004"];
+let workers =  ["http://worker1:5001", "http://worker3:5003", "http://worker4:5004"];
 
 let isLeader = false;
 let leaderUrl = null;

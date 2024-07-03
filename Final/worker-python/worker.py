@@ -20,7 +20,7 @@ heartbeat_failure_threshold = 3
 worker_id = os.getenv('WORKER_ID', 'unknown')
 worker_port = os.getenv('PORT', '5000')
 hostname = os.getenv('HOSTNAME', 'localhost')
-workers =  ["http://worker1:5001", "http://worker2:5002", "http://worker3:5003", "http://worker4:5004"]
+workers =  ["http://worker1:5001", "http://worker3:5003", "http://worker4:5004"]
 
 heartbeat_failures = 0
 current_worker_index = 0  # Índice del worker al que se asignará la próxima tarea

@@ -1,7 +1,6 @@
 {
     "name": "client-js",
     "version": "1.0.0",
-    "description": "Client Application",
     "main": "server.js",
     "scripts": {
         "start": "node server.js"

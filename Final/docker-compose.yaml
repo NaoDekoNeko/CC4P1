@@ -11,17 +11,17 @@ services:
       - "5001:5001"
     hostname: worker1
 
-  worker2:
-    build: ./worker-python
-    container_name: worker2
-    environment:
-      - WORKER_ID=2
-      - PORT=5002
-    networks:
-      - mynetwork
-    ports:
-      - "5002:5002"
-    hostname: worker2
+  #worker2:
+  #  build: ./worker-python
+  #  container_name: worker2
+  #  environment:
+  #    - WORKER_ID=2
+  #    - PORT=5002
+  #  networks:
+  #    - mynetwork
+  #  ports:
+  #    - "5002:5002"
+  #  hostname: worker2
 
   worker3:
     build: ./worker-js
