@@ -8,11 +8,11 @@ app = Quart(__name__)
 
 leader_url = None
 client_id = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-port = os.getenv('PORT', '5003')
+port = os.getenv('PORT', '5005')
 
 def get_leader_url():
     global leader_url
-    workers = ["http://worker1:5001", "http://worker2:5002", "http://worker3:5003"]
+    workers = ["http://worker1:5001", "http://worker2:5002", "http://worker3:5003", "http://worker4:5004"]
     for worker in workers:
         try:
             print(f"Checking leader status from {worker}")
@@ -59,7 +59,7 @@ async def submit_task():
 
         print(f"Submitting task to leader {leader_url} with task: {task}")
         try:
-            response = requests.post(f"{leader_url}/submit_task", json=task)
+            response = requests.post(f"{leader_url}/leader_submit_task", json=task)
             result_data = response.json()
             print(f"Task submitted: {result_data}")
             return jsonify(result_data)

@@ -20,9 +20,10 @@ heartbeat_failure_threshold = 3
 worker_id = os.getenv('WORKER_ID', 'unknown')
 worker_port = os.getenv('PORT', '5000')
 hostname = os.getenv('HOSTNAME', 'localhost')
-workers = ['http://worker1:5001', 'http://worker2:5002', 'http://worker3:5003']
+workers =  ["http://worker1:5001", "http://worker2:5002", "http://worker3:5003", "http://worker4:5004"]
 
 heartbeat_failures = 0
+current_worker_index = 0  # Índice del worker al que se asignará la próxima tarea
 
 def process_task(task):
     logging.info(f"Processing task: {task['task_type']} for client {task['client_id']}")
@@ -139,6 +140,33 @@ def transfer_leadership():
     is_leader = True
     leader_url = f"http://{hostname}:{worker_port}"
     logging.info(f"Worker {worker_id} reassuming leadership due to lack of alternatives")
+
+def assign_task(task):
+    global current_worker_index
+    attempts = 0
+    while attempts < len(workers):
+        worker = workers[current_worker_index]
+        if worker != f"http://{hostname}:{worker_port}":  # No asignarse la tarea a sí mismo
+            try:
+                response = requests.post(f"{worker}/submit_task", json=task)
+                if response.status_code == 200:
+                    logging.info(f"Task assigned to {worker}")
+                    current_worker_index = (current_worker_index + 1) % len(workers)
+                    return response.json()
+            except Exception as e:
+                logging.error(f"Error assigning task to {worker}: {e}")
+        current_worker_index = (current_worker_index + 1) % len(workers)
+        attempts += 1
+    return {"status": "Failed to assign task to any worker"}
+
+@app.route('/leader_submit_task', methods=['POST'])
+def leader_submit_task():
+    if not is_leader:
+        return jsonify({"status": "Not the leader"}), 403
+    task = request.json
+    logging.info(f"Leader {worker_id} received task: {task}")
+    result = assign_task(task)
+    return jsonify(result)
 
 if __name__ == '__main__':
     if worker_id == '1':

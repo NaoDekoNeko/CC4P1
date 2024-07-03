@@ -5,7 +5,6 @@ services:
     environment:
       - WORKER_ID=1
       - PORT=5001
-      - HOSTNAME=worker1
     networks:
       - mynetwork
     ports:
@@ -18,7 +17,6 @@ services:
     environment:
       - WORKER_ID=2
       - PORT=5002
-      - HOSTNAME=worker2
     networks:
       - mynetwork
     ports:
@@ -26,28 +24,46 @@ services:
     hostname: worker2
 
   worker3:
-    build: ./worker-node
+    build: ./worker-js
     container_name: worker3
     environment:
       - WORKER_ID=3
       - PORT=5003
-      - HOSTNAME=worker3
     networks:
       - mynetwork
     ports:
       - "5003:5003"
     hostname: worker3
 
-  client:
-    build: ./client
-    container_name: client
+  worker4:
+    build: ./java-worker
+    container_name: worker4
     environment:
+      - WORKER_ID=4
       - PORT=5004
     networks:
       - mynetwork
     ports:
       - "5004:5004"
+    hostname: worker4
+
+  client:
+    build: ./client-python
+    container_name: client
+    networks:
+      - mynetwork
+    ports:
+      - "5005:5005"
     hostname: client
+
+  client-js:
+    build: ./client-js
+    container_name: client-js
+    networks:
+      - mynetwork
+    ports:
+      - "5006:5006"
+    hostname: client-js
 
 networks:
   mynetwork:
