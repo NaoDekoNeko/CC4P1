@@ -50,6 +50,8 @@ services:
   client:
     build: ./client-python
     container_name: client
+    environment:
+      - PORT=5005
     networks:
       - mynetwork
     ports:
@@ -59,6 +61,8 @@ services:
   client-js:
     build: ./client-js
     container_name: client-js
+    environment:
+      - PORT=5006
     networks:
       - mynetwork
     ports:

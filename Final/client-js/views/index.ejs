@@ -23,6 +23,11 @@
             box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
             z-index: 10;
         }
+        #resultText {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -53,14 +58,14 @@
             </div>
             <div class="form-group" id="nField" style="display:none;">
                 <label for="n">Número de Repeticiones (opcional):</label>
-                <input type="number" class="form-control" id="n" name="n">
+                <input type="number" class="form-control" id="n" name="n" value="1">
                 <span class="help-icon" data-help="Ingrese el número de repeticiones para la palabra clave.">?</span>
             </div>
             <button type="submit" class="btn btn-primary">Enviar</button>
         </form>
         <div id="result" class="mt-3">
             <h4>Respuesta:</h4>
-            <p id="resultText">Esperando respuesta...</p>
+            <div id="resultText">Esperando respuesta...</div>
         </div>
     </div>
     <script>
@@ -88,8 +93,30 @@
                 body: formData
             });
             const result = await response.json();
-            document.getElementById('resultText').innerText = JSON.stringify(result);
+            displayResult(result);
         });
+
+        function displayResult(result) {
+            const resultContainer = document.getElementById('resultText');
+            let formattedResult = '';
+            if (result.status === 'Task processed successfully') {
+                const taskType = document.getElementById('taskType').value;
+                if (taskType === 'word_count') {
+                    formattedResult = `Número de coincidencias: ${result.result}`;
+                } else if (taskType === 'keyword_search') {
+                    formattedResult = `Palabra clave ${result.result ? 'encontrada' : 'no encontrada'}`;
+                } else if (taskType === 'keyword_repetition') {
+                    formattedResult = result.result ? 
+                        `Se encontraron al menos ${document.getElementById('n').value} repeticiones de la palabra clave.` :
+                        `No se encontraron suficientes repeticiones de la palabra clave.`;
+                } else {
+                    formattedResult = `Resultado: ${result.result}`;
+                }
+            } else {
+                formattedResult = `Error: ${result.status}`;
+            }
+            resultContainer.innerHTML = formattedResult;
+        }
 
         // Initial form field update
         updateFormFields();
