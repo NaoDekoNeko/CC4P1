@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">KotlinClientFinal</string>
+
+    <string-array name="task_types">
+        <item>word count</item>
+        <item>keyword search</item>
+        <item>keyword repetition</item>
+    </string-array>
+</resources>
