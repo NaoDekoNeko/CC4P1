@@ -187,7 +187,7 @@ class MainActivity : AppCompatActivity() {
             val fileContent = contentResolver.openInputStream(fileUri!!)?.bufferedReader().use { it?.readText() }
 
             val json = JSONObject().apply {
-                put("client_id", "your_client_id")  // Ajusta esto según sea necesario
+                put("client_id", "your_client_id")
                 put("file_content", fileContent)
                 put("task_type", taskType)
                 put("keyword", keyword)
